@@ -106,7 +106,7 @@ public class Transmilenio {
                     agregarConexionBidireccional(actual, siguiente, tiempoReal, rutaConectora);
                 }
             } catch (TransmilenioException e) {
-                // Estaciones no conectadas, continuar
+                
             }
         }
     }
@@ -142,10 +142,10 @@ public class Transmilenio {
             try {
                 return troncal.calcularTiempoViaje(e1, e2);
             } catch (TransmilenioException ex) {
-                // Continuar con siguiente troncal
+                
             }
         }
-        return 3.0; // Tiempo por defecto
+        return 3.0; 
     }
 
     // ==================== SERVICIOS PRINCIPALES ====================

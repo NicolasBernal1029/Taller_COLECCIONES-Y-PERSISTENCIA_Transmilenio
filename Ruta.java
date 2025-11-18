@@ -70,8 +70,7 @@ public class Ruta {
      * Obtiene la posición de una estación en la secuencia de la ruta.
      * 
      * @param estacion Estación a buscar
-     * @return Índice de la estación (0-based), o -1 si no existe
-     */
+     * @return Índice de la estación 
     public int obtenerPosicionEstacion(Estacion estacion) {
         return indiceEstaciones.getOrDefault(estacion, -1);
     }
@@ -134,9 +133,8 @@ public class Ruta {
             );
         }
         
-        return distancia - 1; // Restar 1 para no contar una de las estaciones
+        return distancia - 1; 
     }
-
 
     /**
      * Obtiene el número total de estaciones en la ruta.

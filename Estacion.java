@@ -116,7 +116,7 @@ public class Estacion {
      * @return Tiempo de espera en minutos para ese nivel
      */
     public int consultarTiempoEsperaPorNivel(NivelOcupacion nivel) {
-        return parametrosEspera.getOrDefault(nivel, 5); // 5 minutos por defecto
+        return parametrosEspera.getOrDefault(nivel, 5); 
     }
 
     /**

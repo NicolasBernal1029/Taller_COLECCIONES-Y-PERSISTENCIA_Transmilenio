@@ -13,7 +13,7 @@ import java.util.*;
  */
 public class Troncal {
     private final String nombreTroncal;
-    private final double velocidadCrucero; // metros por minuto
+    private final double velocidadCrucero; 
     private final ArrayList<Estacion> topologiaEstaciones;
     private final HashMap<ClaveConexion, Double> mapaDistancias;
 
