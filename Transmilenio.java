@@ -3,299 +3,165 @@ import java.util.*;
 /**
  * Sistema principal de gestión del TransMilenio.
  * 
- * Administra estaciones, rutas y troncales, proporcionando servicios de
- * consulta optimizados para información de tiempos, conexiones y recorridos.
- * 
  * @author Nicolas Felipe Bernal Gallo  
  * @author Juan Daniel Bogota Fuentes
  * @version 1.0
  */
 public class Transmilenio {
-    private final HashMap<String, Estacion> registroEstaciones;
-    private final TreeMap<String, Ruta> catalogoRutas;
-    private final HashMap<String, Troncal> redTroncales;
-    
+
+    private final HashMap<String, Estacion> estaciones;
+    private final HashMap<String, Troncal> troncales;
+    private final HashMap<String, Ruta> rutas;
 
     /**
      * Construye un nuevo sistema TransMilenio vacío.
      */
     public Transmilenio() {
-        this.registroEstaciones = new HashMap<>();
-        this.catalogoRutas = new TreeMap<>();
-        this.redTroncales = new HashMap<>();
-        this.listaAdyacencia = new HashMap<>();
-        this.cacheRecorridos = new LinkedHashMap<String, ResultadoRecorrido>();
+        this.estaciones = new HashMap<>();
+        this.troncales = new HashMap<>();
+        this.rutas = new HashMap<>();
     }
     
     /**
-     * Registra una nueva estación en el sistema.
+     * Agrega una estación al sistema.
+     * @param estacion estación a agregar
+     * @throws TransmilenioException si el nombre está vacío o la estación ya existe
      */
-    public void registrarEstacion(Estacion estacion) {
-        if (estacion == null) {
-            throw new IllegalArgumentException("No se puede registrar una estación nula");
+    public void agregarEstacion(Estacion estacion) throws TransmilenioException {
+        if (estacion.getNombre() == null || estacion.getNombre().isEmpty()) {
+            throw new TransmilenioException(TransmilenioException.SIN_NOMBRE);
         }
-        
-        String id = estacion.getIdentificador();
-        if (registroEstaciones.containsKey(id)) {
-            throw new IllegalStateException("Ya existe una estación con el identificador: " + id);
-        }
-        
-        registroEstaciones.put(id, estacion);
-        listaAdyacencia.putIfAbsent(estacion, new ArrayList<>());
+        estaciones.put(estacion.getNombre(), estacion);
     }
-
-    /**
-     * Registra una nueva ruta en el sistema.
-     */
-    public void registrarRuta(Ruta ruta) {
-        if (ruta == null) {
-            throw new IllegalArgumentException("No se puede registrar una ruta nula");
-        }
-        
-        String codigo = ruta.getCodigoRuta();
-        if (catalogoRutas.containsKey(codigo)) {
-            throw new IllegalStateException("Ya existe una ruta con el código: " + codigo);
-        }
-        
-        catalogoRutas.put(codigo, ruta);
-        actualizarGrafoConRuta(ruta);
-    }
-
+    
     /**
      * Agrega una troncal al sistema.
+     * @param troncal troncal a agregar
+     * @throws TransmilenioException si el nombre está vacío
      */
-    public void agregarTroncal(Troncal troncal) {
-        if (troncal == null) {
-            throw new IllegalArgumentException("No se puede agregar una troncal nula");
+    public void agregarTroncal(Troncal troncal) throws TransmilenioException {
+        if (troncal.getNombreTroncal() == null || troncal.getNombreTroncal().isEmpty()) {
+            throw new TransmilenioException(TransmilenioException.SIN_NOMBRE);
         }
-        
-        redTroncales.put(troncal.getNombreTroncal(), troncal);
-        actualizarGrafoConTroncal(troncal);
-    }
-
-    /**
-     * Actualiza el grafo con las estaciones de una ruta.
-     */
-    private void actualizarGrafoConRuta(Ruta ruta) {
-        List<Estacion> estaciones = ruta.obtenerSecuenciaEstaciones();
-        
-        for (int i = 0; i < estaciones.size() - 1; i++) {
-            Estacion actual = estaciones.get(i);
-            Estacion siguiente = estaciones.get(i + 1);
-            
-            double tiempo = calcularTiempoEstimado(actual, siguiente);
-            agregarConexionBidireccional(actual, siguiente, tiempo, ruta);
-        }
-    }
-
-    /**
-     * Actualiza el grafo con información de una troncal.
-     */
-    private void actualizarGrafoConTroncal(Troncal troncal) {
-        List<Estacion> estaciones = troncal.obtenerTopologiaEstaciones();
-        
-        for (int i = 0; i < estaciones.size() - 1; i++) {
-            Estacion actual = estaciones.get(i);
-            Estacion siguiente = estaciones.get(i + 1);
-            
-            try {
-                double tiempoReal = troncal.calcularTiempoViaje(actual, siguiente);
-                Ruta rutaConectora = buscarRutaQueConecta(actual, siguiente);
-                
-                if (rutaConectora != null) {
-                    agregarConexionBidireccional(actual, siguiente, tiempoReal, rutaConectora);
-                }
-            } catch (TransmilenioException e) {
-                
-            }
-        }
+        troncales.put(troncal.getNombreTroncal(), troncal);
     }
     
     /**
-     * Agrega una conexión bidireccional en el grafo.
+     * Agrega una ruta al sistema.
+     * @param ruta ruta a agregar
+     * @throws TransmilenioException si el nombre está vacío o tiene menos de 2 estaciones
      */
-    private void agregarConexionBidireccional(Estacion e1, Estacion e2, double tiempo, Ruta ruta) {
-        listaAdyacencia.putIfAbsent(e1, new ArrayList<>());
-        listaAdyacencia.putIfAbsent(e2, new ArrayList<>());
-        
-        listaAdyacencia.get(e1).add(new Conexion(e2, tiempo, ruta));
-        listaAdyacencia.get(e2).add(new Conexion(e1, tiempo, ruta));
-    }
-
-    /**
-     * Busca una ruta que conecte dos estaciones.
-     */
-    private Ruta buscarRutaQueConecta(Estacion e1, Estacion e2) {
-        for (Ruta ruta : catalogoRutas.values()) {
-            if (ruta.verificarConexion(e1, e2)) {
-                return ruta;
-            }
+    public void agregarRuta(Ruta ruta) throws TransmilenioException {
+        if (ruta.getNombre() == null || ruta.getNombre().isEmpty()) {
+            throw new TransmilenioException(TransmilenioException.SIN_NOMBRE);
         }
-        return null;
-    }
-
-    /**
-     * Calcula tiempo estimado entre estaciones.
-     */
-    private double calcularTiempoEstimado(Estacion e1, Estacion e2) {
-        for (Troncal troncal : redTroncales.values()) {
-            try {
-                return troncal.calcularTiempoViaje(e1, e2);
-            } catch (TransmilenioException ex) {
-                
-            }
+        if (ruta.getEstaciones().size() < 2) {
+            throw new TransmilenioException(TransmilenioException.RUTA_DEBE_TENER_ESTACIONES);
         }
-        return 3.0; 
+        rutas.put(ruta.getNombre(), ruta);
     }
-
-    // ==================== SERVICIOS PRINCIPALES ====================
-
+    
     /**
-     * SERVICIO 1: Consulta el tiempo de espera actual en una estación.
-     * El tiempo depende del nivel de ocupación actual de la estación.
-     * 
-     * @param nombreEstacion Nombre de la estación a consultar
-     * @return Tiempo de espera en minutos
+     * SERVICIO 1: El tiempo de espera de una estación (Dado su nombre)
+     * @param nombreEstacion nombre de la estación
+     * @return tiempo de espera en minutos
      * @throws TransmilenioException si la estación no existe
-     * 
      */
-    public int consultarTiempoEspera(String nombreEstacion) 
-            throws TransmilenioException {
-        
-        validarNombreNoVacio(nombreEstacion, "estación");
-        
-        Estacion estacion = registroEstaciones.get(nombreEstacion);
-        
-        if (estacion == null) {
-            throw new TransmilenioException(
-                TransmilenioException.ESTACION_NO_ENCONTRADA + ": '" + nombreEstacion + "'"
-            );
+    public int getTiempoEspera(String nombreEstacion) throws TransmilenioException {
+        if (!estaciones.containsKey(nombreEstacion)) {
+            throw new TransmilenioException(TransmilenioException.ESTACION_NO_ENCONTRADA);
         }
-        
-        return estacion.calcularTiempoEsperaActual();
+        return estaciones.get(nombreEstacion).getTiempoEspera();
     }
-
+    
     /**
-     * SERVICIO 2: Lista todos los nombres de rutas ordenados alfabéticamente.
-     * Gracias al TreeMap, las rutas ya están ordenadas automáticamente.
-     * 
-     * @return Lista de nombres de rutas en orden alfabético
-     * 
+     * SERVICIO 2: El nombre de las rutas del sistema ordenadas alfabéticamente.
+     * @return lista de nombres de rutas ordenadas alfabéticamente
      */
-    public List<String> listarRutasAlfabeticamente() {
-        return new ArrayList<>(catalogoRutas.keySet());
+    public ArrayList<String> getRutasOrdenadas() {
+        TreeSet<String> nombresOrdenados = new TreeSet<>(rutas.keySet());
+        return new ArrayList<>(nombresOrdenados);
     }
-
+    
     /**
-     * SERVICIO 3: Cuenta las paradas para ir de una estación a otra en una ruta específica.
-     * Solo cuenta paradas intermedias (no incluye origen ni destino).
-     * 
-     * @param nombreRuta Nombre de la ruta
-     * @param nombreOrigen Nombre de la estación de origen
-     * @param nombreDestino Nombre de la estación de destino
-     * @return Número de paradas intermedias
-     * @throws TransmilenioException si algún elemento no existe o no están conectados
-     * 
+     * SERVICIO 3: El número de paradas para ir de una estación a otra tomando una ruta dada.
+     * @param nombreRuta nombre de la ruta
+     * @param nombreOrigen nombre de la estación de origen
+     * @param nombreDestino nombre de la estación de destino
+     * @return número de paradas
+     * @throws TransmilenioException si la ruta no existe o no conecta las estaciones
      */
-    public int contarParadasEntreEstaciones(String nombreRuta, String nombreOrigen,String nombreDestino) throws TransmilenioException {
-        
-        validarNombreNoVacio(nombreRuta, "ruta");
-        validarNombreNoVacio(nombreOrigen, "estación origen");
-        validarNombreNoVacio(nombreDestino, "estación destino");
-        
-        Ruta ruta = catalogoRutas.get(nombreRuta);
-        if (ruta == null) {
-            throw new TransmilenioException(
-                TransmilenioException.RUTA_NO_ENCONTRADA + ": '" + nombreRuta + "'"
-            );
+    public int getNumeroParadas(String nombreRuta, String nombreOrigen, String nombreDestino) throws TransmilenioException {
+        if (!rutas.containsKey(nombreRuta)) {
+            throw new TransmilenioException(TransmilenioException.RUTA_NO_ENCONTRADA);
         }
         
-        Estacion origen = registroEstaciones.get(nombreOrigen);
-        Estacion destino = registroEstaciones.get(nombreDestino);
-        
-        if (origen == null) {
-            throw new TransmilenioException(
-                TransmilenioException.ESTACION_NO_ENCONTRADA + ": '" + nombreOrigen + "'"
-            );
-        }
-        
-        if (destino == null) {
-            throw new TransmilenioException(
-                TransmilenioException.ESTACION_NO_ENCONTRADA + ": '" + nombreDestino + "'"
-            );
-        }
-        
-        return ruta.determinarParadasIntermedias(origen, destino);
+        Ruta ruta = rutas.get(nombreRuta);
+        return ruta.getNumeroParadas(nombreOrigen, nombreDestino);
     }
-
+    
     /**
-     * SERVICIO 4: Busca rutas directas (sin transbordos) entre dos estaciones.
-     * Ordena por: 1) Menor número de paradas, 2) Orden alfabético
+     * SERVICIO 4: El nombre de las rutas que permiten ir de una estación a otra sin 
+     * hacer transbordos ordenadas de menor a mayor por número de paradas y 
+     * alfabéticamente por nombre de la ruta.
      * 
-     * @param nombreOrigen Nombre de la estación de origen
-     * @param nombreDestino Nombre de la estación de destino
-     * @return Lista ordenada de nombres de rutas directas
-     * @throws TransmilenioException si alguna estación no existe
-     * 
+     * @param nombreOrigen nombre de la estación de origen
+     * @param nombreDestino nombre de la estación de destino
+     * @return lista de nombres de rutas ordenadas
+     * @throws TransmilenioException si las estaciones no existen o son iguales
      */
-    public List<String> buscarRutasDirectasOrdenadas(String nombreOrigen, String nombreDestino) throws TransmilenioException {
+    public ArrayList<String> getRutasDirectas(String nombreOrigen, String nombreDestino) throws TransmilenioException {
         
-        validarNombreNoVacio(nombreOrigen, "estación origen");
-        validarNombreNoVacio(nombreDestino, "estación destino");
-        
-        Estacion origen = registroEstaciones.get(nombreOrigen);
-        Estacion destino = registroEstaciones.get(nombreDestino);
-        
-        if (origen == null) {
-            throw new TransmilenioException(
-                TransmilenioException.ESTACION_NO_ENCONTRADA + ": '" + nombreOrigen + "'"
-            );
+        if (!estaciones.containsKey(nombreOrigen)) {
+            throw new TransmilenioException(TransmilenioException.ESTACION_NO_ENCONTRADA);
         }
-        
-        if (destino == null) {
-            throw new TransmilenioException(
-                TransmilenioException.ESTACION_NO_ENCONTRADA + ": '" + nombreDestino + "'"
-            );
+        if (!estaciones.containsKey(nombreDestino)) {
+            throw new TransmilenioException(TransmilenioException.ESTACION_NO_ENCONTRADA);
         }
-        
-        if (origen.equals(destino)) {
-            throw new TransmilenioException(
-                TransmilenioException.ESTACIONES_IGUALES
-            );
+        if (nombreOrigen.equals(nombreDestino)) {
+            throw new TransmilenioException(TransmilenioException.ESTACIONES_IGUALES);
         }
+
+        TreeMap<Integer, TreeSet<String>> rutasPorParadas = new TreeMap<>();
         
-        List<RutaConParadas> rutasValidas = new ArrayList<>();
-        
-        for (Ruta ruta : catalogoRutas.values()) {
-            if (!ruta.verificarConexion(origen, destino)) {
-                continue;
-            }
-            
-            try {
-                int paradas = ruta.determinarParadasIntermedias(origen, destino);
-                rutasValidas.add(new RutaConParadas(ruta.getCodigoRuta(), paradas));
-            } catch (TransmilenioException e) {
-            }
-        }
-        
-        Collections.sort(rutasValidas, new Comparator<RutaConParadas>() {
-            @Override
-            public int compare(RutaConParadas r1, RutaConParadas r2) {
-                if (r1.paradas != r2.paradas) {
-                    return Integer.compare(r1.paradas, r2.paradas);
+        for (Ruta ruta : rutas.values()) {
+            if (ruta.conectaEstaciones(nombreOrigen, nombreDestino)) {
+                try {
+                    int numParadas = ruta.getNumeroParadas(nombreOrigen, nombreDestino);
+                    
+                    if (!rutasPorParadas.containsKey(numParadas)) {
+                        rutasPorParadas.put(numParadas, new TreeSet<>());
+                    }
+                    
+                    rutasPorParadas.get(numParadas).add(ruta.getNombre());
+                    
+                } catch (TransmilenioException e) {
                 }
-                return r1.nombre.compareTo(r2.nombre);
             }
-        });
+        }
         
-        List<String> resultado = new ArrayList<>();
-        for (RutaConParadas rc : rutasValidas) {
-            resultado.add(rc.nombre);
+        ArrayList<String> resultado = new ArrayList<>();
+        for (TreeSet<String> nombresRutas : rutasPorParadas.values()) {
+            resultado.addAll(nombresRutas);
+        }
+        
+        if (resultado.isEmpty()) {
+            throw new TransmilenioException(TransmilenioException.SIN_CAMINO_DISPONIBLE);
         }
         
         return resultado;
     }
     
-
-
+    /**
+     * Obtiene una estación por su nombre.
+     * @param nombre nombre de la estación
+     * @return la estación
+     * @throws TransmilenioException si no existe
+     */
+    public Estacion getEstacion(String nombre) throws TransmilenioException {
+        if (!estaciones.containsKey(nombre)) {
+            throw new TransmilenioException(TransmilenioException.ESTACION_NO_ENCONTRADA);
+        }
+        return estaciones.get(nombre);
+    }
 }
